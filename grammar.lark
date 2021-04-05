@@ -1,0 +1,24 @@
+simpleppl: defn*
+defn: var "=" numexpr -> assign
+    | var "~" dist -> distributed
+
+numexpr: numexpr "+" numexpr -> sum
+       | numexpr "-" numexpr -> difference
+       | numexpr "*" numexpr -> product
+       | numexpr "/" numexpr -> quotient
+       | "-" numexpr -> negation
+       | "(" numexpr ")" -> parentheses
+       | var
+       | NUMBER -> number
+
+?dist: bern | uniform | normal
+bern: "Bern(" numexpr ")"
+uniform: "Unif(" numexpr "," numexpr ")"
+normal: "N(" numexpr "," numexpr ")"
+
+var: CNAME
+
+%import common.SIGNED_NUMBER -> NUMBER
+%import common.WS
+%import common.CNAME
+%ignore WS
