@@ -11,12 +11,14 @@ numexpr: numexpr "+" numexpr -> sum
        | var
        | NUMBER -> number
 
-?dist: bern | uniform | normal
-bern: "Bern(" numexpr ")"
-uniform: "Unif(" numexpr "," numexpr ")"
-normal: "N(" numexpr "," numexpr ")"
+?dist: var "(" arglist ")"
 
-var: CNAME
+arglist: 
+       | numexpr arglistrest
+arglistrest: 
+           | "," numexpr arglistrest
+
+?var: CNAME -> identifier
 
 %import common.SIGNED_NUMBER -> NUMBER
 %import common.WS
