@@ -33,10 +33,7 @@ def get_num_args(arglist):
 def process_arglist(store, arglist):
   if len(arglist.children) == 0:
     return []
-  args = [process_numexpr(store, arglist.children[0])]
-  for a in arglist.children[1].children:
-    args.append(process_numexpr(store, a))
-  return args
+  return [process_numexpr(store, arglist.children[0])] + process_arglist(store, arglist.children[1])
 
 def run(program):
   parser = Lark.open('./grammar.lark', start='simpleppl')
@@ -57,8 +54,12 @@ def distributed_stmt(m, store, stmt):
   arglist = dist_stmt.children[1]
   args = process_arglist(store, arglist)
   check_arity(dist, len(args))
-  if dist == 'bern':
+  if dist == 'Bern':
     store[var] = m.Var(var, pm.Bernoulli.dist(p=args[0], testval=0.5))
+  elif dist == 'N':
+    store[var] = m.Var(var, pm.Normal.dist(mu=args[0], sigma=args[1],testval=0))
+  elif dist == 'Unif':
+    store[var] = m.Var(var, pm.Normal.dist(lower=args[0], upper=args[1]))
 
 def lookup(store, key):
   if key not in store:
@@ -78,20 +79,22 @@ def process_numexpr(store, numexp):
     processed_children[i] = process_numexpr(store, child)
   if numexp.data == 'sum':
     return processed_children[0] + processed_children[1]
-  if numexp.data == 'difference':
+  elif numexp.data == 'difference':
     return processed_children[0] - processed_children[1]
-  if numexp.data == 'product':
+  elif numexp.data == 'product':
     return processed_children[0] * processed_children[1]
-  if numexp.data == 'quotient':
+  elif numexp.data == 'quotient':
     return processed_children[0] / processed_children[1]
-  if numexp.data == 'negation':
+  elif numexp.data == 'negation':
     return -processed_children[0]
-  if numexp.data == 'parantheses':
+  elif numexp.data == 'parantheses':
     return processed_children[0]
+
+def load(path):
+  with open(path, 'r') as file:
+    return file.read()
 
 if __name__ == '__main__':
   if len(sys.argv) < 2:
     raise RuntimeError('Expected a .ppl file to run')
-  with open(sys.argv[1], 'r') as file:
-    program = file.read()
-  s = run(program)
+  s = run(load(sys.argv[1]))
