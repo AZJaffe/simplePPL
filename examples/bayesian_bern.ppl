@@ -1,4 +1,3 @@
 x = 76
 p ~ Beta(1,1)
 x ~ Binom(100, p)
-sample 1000

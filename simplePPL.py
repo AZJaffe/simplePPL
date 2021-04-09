@@ -12,6 +12,10 @@ class DuplicateVariable(Exception):
   def __init__(self, var):
     super().__init__(f'Random variable {var} declared twice')
 
+class AssignAfterDistributed(Exception):
+  def __init__(self, var):
+    super().__init__(f'Random variable {var} assigned data after distributed statement')
+
 class WrongArity(Exception):
   def __init__(self, dist, actual, expected):
     super().__init__(f'Distribution {dist} expected {expected} arguments but received {actual}')
@@ -41,7 +45,7 @@ class Store():
 
   def add_rv(self, var, rv):
     if var in self.rvs:
-      raise DuplicateVariable(var)
+      raise AssignAfterDistributed(var)
     self.rvs[var] = rv
 
   def add_data(self, var, data):
@@ -88,14 +92,7 @@ def run(program):
       distributed_stmt(store, stmt)
     if stmt.data == 'dataassign':
       data_assign_stmt(store, stmt)
-    if stmt.data == 'sample':
-      sample_stmt(store, stmt)
   return store
-
-def sample_stmt(store, stmt):
-  num = int(stmt.children[0].value)
-  trace = pm.sample(draws=num, model=store.model, return_inferencedata=True)
-  print(az.summary(trace))
 
 def distributed_stmt(store, stmt):
   var = stmt.children[0].value
@@ -188,3 +185,5 @@ if __name__ == '__main__':
   if len(sys.argv) < 2:
     raise RuntimeError('Expected a .ppl file to run')
   s = run(load(sys.argv[1]))
+  trace = pm.sample(model=s.model, return_inferencedata=True)
+  print(az.summary(trace))

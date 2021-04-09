@@ -2,7 +2,6 @@ simpleppl: defn*
 defn: ID ":=" numexpr -> assign
     | ID "~" dist -> distributed
     | ID "=" data -> dataassign
-    | "sample" INT -> sample
 
 numexpr: numexpr "+" numexpr -> sum
        | numexpr "-" numexpr -> difference
