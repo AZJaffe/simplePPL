@@ -2,6 +2,7 @@ from lark import Lark
 import sys
 import pymc3 as pm
 import numpy as np
+import arviz as az
 
 class UnitializedVariable(Exception):
   def __init__(self, var):
@@ -33,9 +34,10 @@ class InvalidDataLiteral(Exception):
       return f'Invalid data literal for variable {var}'
 
 class Store():
-  def __init__(self):
+  def __init__(self, model):
     self.rvs = {}
     self.data = {}
+    self.model = model
 
   def add_rv(self, var, rv):
     if var in self.rvs:
@@ -46,6 +48,12 @@ class Store():
     if var in self.rvs:
       raise DuplicateVariable(var)
     self.data[var] = data
+
+  def lookup_data(self, var):
+    if var in self.data:
+      return self.data[var]
+    else:
+      return None
 
   def lookup_rv(self, var):
     if var not in self.rvs:
@@ -74,67 +82,75 @@ def check_arity(dist, nargs):
 def run(program):
   parser = Lark.open('./grammar.lark', start='simpleppl')
   p = parser.parse(program)
-  print(p)
-  print(p.pretty())
-  store = Store()
-  m = pm.Model()
+  store = Store(pm.Model())
   for stmt in p.children:
     if stmt.data == 'distributed':
-      distributed_stmt(m, store, stmt)
+      distributed_stmt(store, stmt)
     if stmt.data == 'dataassign':
       data_assign_stmt(store, stmt)
+    if stmt.data == 'sample':
+      sample_stmt(store, stmt)
   return store
 
-def distributed_stmt(m, store, stmt):
+def sample_stmt(store, stmt):
+  num = int(stmt.children[0].value)
+  trace = pm.sample(draws=num, model=store.model, return_inferencedata=True)
+  print(az.summary(trace))
+
+def distributed_stmt(store, stmt):
   var = stmt.children[0].value
   dist_stmt = stmt.children[1]
   dist = dist_stmt.children[0].value
   args = [process_numexpr(store, arg) for arg in dist_stmt.children[1:]]
   check_arity(dist, len(args))
+  data = store.lookup_data(var)
+  with store.model:
   # Discrete
-  if dist == 'Bern':
-    store.add_rv(var, m.Var(var, pm.Bernoulli.dist(p=args[0], testval=0.5)))
-  elif dist == 'Unif':
-    store.add_rv(var, m.Var(var, pm.Uniform.dist(lower=args[0], upper=args[1], testval=args[0])))
-  elif dist == 'Beta':
-    store.add_rv(var, m.Var(var, pm.Beta.dist(alpha=args[0], beta=args[1], testval=0)))
-  elif dist == 'Pois':
-    store.add_rv(var, m.Var(var, pm.Poisson.dist(mu=args[0], testval=0)))
-  elif dist == 'DUnif':
-    store.add_rv(var, m.Var(var, pm.DiscreteUniform.dist(lower=args[0], upper=args[1], testval=0)))
-  elif dist == 'Binom':
-    store.add_rv(var, m.Var(var, pm.Binomial.dist(n=args[0], p=args[1], testval=0)))
-  elif dist == 'Geometric':
-    store.add_rv(var, m.Var(var, pm.Geometric.dist(p=args[0], testval=0)))
-  # Continuous
-  elif dist == 'N':
-    store.add_rv(var, m.Var(var, pm.Normal.dist(mu=args[0], sigma=args[1],testval=0)))
-  # elif dist == 'Dir':
-  #   store.add_rv(var, m.Var(var, pm.Dirchlet.dist(a=args[0])))
-  elif dist == 'Exp':
-    store.add_rv(var, m.Var(var, pm.Exponential.dist(lam=args[0], testval=0)))
-  # Multivariate
-  elif dist == 'Gamma':
-    store.add_rv(var, m.Var(var, pm.Gamma.dist(alpha=args[0], beta=args[1], testval=0)))
+    if dist == 'Bern':
+      store.add_rv(var, pm.Bernoulli(var, p=args[0], observed=data))
+    elif dist == 'Unif':
+      store.add_rv(var, pm.Uniform(var, lower=args[0], upper=args[1], observed=data))
+    elif dist == 'Beta':
+      store.add_rv(var, pm.Beta(var, alpha=args[0], beta=args[1], observed=data))
+    elif dist == 'Pois':
+      store.add_rv(var, pm.Poisson(var, mu=args[0], observed=data))
+    elif dist == 'DUnif':
+      store.add_rv(var, pm.DiscreteUniform(var, lower=args[0], upper=args[1], observed=data))
+    elif dist == 'Binom':
+      store.add_rv(var, pm.Binomial(var, n=args[0], p=args[1], observed=data))
+    elif dist == 'Geometric':
+      store.add_rv(var, pm.Geometric(var, p=args[0], observed=data))
+    # Continuous
+    elif dist == 'N':
+      store.add_rv(var, pm.Normal(var, mu=args[0], sigma=args[1], observed=data))
+    # elif dist == 'Dir':
+    #   store.add_rv(var, var, m.Var(var, pm.Dirchlet.dist(a=args[0]), data=data))
+    elif dist == 'Exp':
+      store.add_rv(var, pm.Exponential(var, lam=args[0], testval=0, observed=data))
+    # Multivariate
+    elif dist == 'Gamma':
+      store.add_rv(var, pm.Gamma(var, alpha=args[0], beta=args[1], observed=data))
 
 def data_assign_stmt(store, stmt):
-  var = stmt.children[0].children[0].value
+  var = stmt.children[0].value
   data = stmt.children[1]
   a = parse_data(data)
-  store.add_data(var, data)
+  store.add_data(var, a)
 
-def parse_data(data):
+def parse_data(tree):
+  if tree.data == 'number':
+    return tree.children[0].value
   if len(data.children) == 0:
     return np.array([])
-  if data.children[0].data == 'number':
-    a = np.zeros((len(data.children)))
-    for i,child in enumerate(data.children):
+  if tree.children[0].data == 'number':
+    a = np.zeros((len(tree.children)))
+    for i,child in enumerate(tree.children):
       if child.data != 'number':
         raise InvalidDataLiteral()
       a[i] = float(child.children[0])
     return a
   else:
-    a = [parse_data(child) for child in data.children]
+    a = [parse_data(child) for child in tree.children]
     for subarray in a:
       if a[0].shape != subarray.shape:
         raise InvalidDataLiteral()
@@ -145,7 +161,7 @@ def process_numexpr(store, numexp):
   if numexp.data == 'number':
     return float(numexp.children[0].value)
   if numexp.data == 'id':
-    return lookup(store, numexp.children[0].value)
+    return store.lookup_rv(numexp.children[0].value)
 
   # Recursive cases
   processed_children = [None]*len(numexp.children)

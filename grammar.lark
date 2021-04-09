@@ -1,7 +1,8 @@
 simpleppl: defn*
-defn: ID "=" numexpr -> assign
+defn: ID ":=" numexpr -> assign
     | ID "~" dist -> distributed
     | ID "=" data -> dataassign
+    | "sample" INT -> sample
 
 numexpr: numexpr "+" numexpr -> sum
        | numexpr "-" numexpr -> difference
@@ -16,8 +17,9 @@ dist: ID "(" [numexpr ("," numexpr)*] ")"
 
 
 data: NUMBER -> number 
-    | "[" [data ("," data)*] "]"
+    | "[" [data ("," data)*] "]" -> vector
 
+%import common.INT
 %import common.SIGNED_NUMBER -> NUMBER
 %import common.WS
 %import common.CNAME -> ID

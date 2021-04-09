@@ -1,5 +1,6 @@
 from lark import Lark
 import sys
+import simplePPL
 
 if len(sys.argv) < 2:
   raise RuntimeError('Expected a .ppl file to run')

@@ -31,6 +31,10 @@ class Test(unittest.TestCase):
     self.assertEqual(str(s.lookup_rv('x')), 'x ~ Gamma')
 
   def test_examples(self):
+    p = simplePPL.load('./examples/bayesian_bern.ppl')
+    s = simplePPL.run(p)
+    print(type(s['x']))
+
     p = simplePPL.load('./examples/bern.ppl')
     s = simplePPL.run(p)
     self.assertEqual(str(s.lookup_rv('x')), 'x ~ Bernoulli')
@@ -40,6 +44,7 @@ class Test(unittest.TestCase):
     self.assertEqual(str(s.lookup_rv('z')), 'z ~ Bernoulli')
     self.assertEqual(str(s.lookup_rv('x1')), 'x1 ~ Normal')
     self.assertEqual(str(s.lookup_rv('x2')), 'x2 ~ Normal')
+
 
   def test_distribution_errors(self):
     try:
