@@ -1,7 +1,7 @@
 simpleppl: defn*
 defn: var "=" numexpr -> assign
     | var "~" dist -> distributed
-    | var "=" data
+    | var "=" data -> dataassign
 
 numexpr: numexpr "+" numexpr -> sum
        | numexpr "-" numexpr -> difference
@@ -15,7 +15,7 @@ numexpr: numexpr "+" numexpr -> sum
 dist: var "(" [numexpr ("," numexpr)*] ")"
 
 
-data: NUMBER
+data: NUMBER -> number 
     | "[" [data ("," data)*] "]"
 
 ?var: CNAME -> identifier
