@@ -1,7 +1,7 @@
 simpleppl: defn*
-defn: var "=" numexpr -> assign
-    | var "~" dist -> distributed
-    | var "=" data -> dataassign
+defn: ID "=" numexpr -> assign
+    | ID "~" dist -> distributed
+    | ID "=" data -> dataassign
 
 numexpr: numexpr "+" numexpr -> sum
        | numexpr "-" numexpr -> difference
@@ -9,18 +9,16 @@ numexpr: numexpr "+" numexpr -> sum
        | numexpr "/" numexpr -> quotient
        | "-" numexpr -> negation
        | "(" numexpr ")" -> parentheses
-       | var
+       | ID -> id
        | NUMBER -> number
 
-dist: var "(" [numexpr ("," numexpr)*] ")"
+dist: ID "(" [numexpr ("," numexpr)*] ")"
 
 
 data: NUMBER -> number 
     | "[" [data ("," data)*] "]"
 
-?var: CNAME -> identifier
-
 %import common.SIGNED_NUMBER -> NUMBER
 %import common.WS
-%import common.CNAME
+%import common.CNAME -> ID
 %ignore WS

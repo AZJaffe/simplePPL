@@ -86,9 +86,9 @@ def run(program):
   return store
 
 def distributed_stmt(m, store, stmt):
-  var = stmt.children[0].children[0].value
+  var = stmt.children[0].value
   dist_stmt = stmt.children[1]
-  dist = dist_stmt.children[0].children[0].value
+  dist = dist_stmt.children[0].value
   args = [process_numexpr(store, arg) for arg in dist_stmt.children[1:]]
   check_arity(dist, len(args))
   # Discrete
@@ -143,9 +143,9 @@ def parse_data(data):
 def process_numexpr(store, numexp):
   # Base Cases
   if numexp.data == 'number':
-    return float(numexp.children[0])
-  if numexp.data == 'identifier':
-    return lookup(store, numexp.children[0])
+    return float(numexp.children[0].value)
+  if numexp.data == 'id':
+    return lookup(store, numexp.children[0].value)
 
   # Recursive cases
   processed_children = [None]*len(numexp.children)
