@@ -28,23 +28,10 @@ def check_arity(dist, nargs):
     'Geometric': 1,
     'Binom': 2,
   }
-  print(f'checking arity of {dist} given {nargs}')
   if dist not in dists_to_arity:
-    print('Undefined Dist')
     raise UndefinedDistribution(dist)
   if dists_to_arity[dist] != nargs:
-    print('Wrong Arity')
     raise WrongArity(dist, nargs, dists_to_arity[dist])
-
-def get_num_args(arglist):
-  if len(arglist.children) == 0:
-    return 0
-  return 1 + len(arglist.children[1].children)
-
-def process_arglist(store, arglist):
-  if len(arglist.children) == 0:
-    return []
-  return [process_numexpr(store, arglist.children[0])] + process_arglist(store, arglist.children[1])
 
 def run(program):
   parser = Lark.open('./grammar.lark', start='simpleppl')
@@ -62,8 +49,7 @@ def distributed_stmt(m, store, stmt):
   var = stmt.children[0].children[0].value
   dist_stmt = stmt.children[1]
   dist = dist_stmt.children[0].children[0].value
-  arglist = dist_stmt.children[1]
-  args = process_arglist(store, arglist)
+  args = [process_numexpr(store, arg) for arg in dist_stmt.children[1:]]
   check_arity(dist, len(args))
   # Discrete
   if dist == 'Bern':

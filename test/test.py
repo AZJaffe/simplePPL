@@ -22,8 +22,6 @@ s = simplePPL.run('x ~ Pois(5)')
 assert str(s['x']) == 'x ~ Poisson'
 s = simplePPL.run('x ~ DUnif(0,1)')
 assert str(s['x']) == 'x ~ DiscreteUniform'
-s = simplePPL.run('x ~ DUnif(0,1)')
-assert str(s['x']) == 'x ~ DiscreteUniform'
 s = simplePPL.run('x ~ Binom(5,0.5)')
 assert str(s['x']) == 'x ~ Binomial'
 s = simplePPL.run('x ~ Geometric(0.5)')
