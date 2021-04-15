@@ -8,6 +8,9 @@ class Test(unittest.TestCase):
   def setUp(self):
     self.parser = Lark.open('./grammar.lark', start='simpleppl')
 
+  def test_matmul(self):
+    s = simplePPL.run('W1(3,4) ~ N(0,1) \n W2(4,5) ~ N(0,1) \n z := W1 @ W2')
+
   def test_distributions(self):
     s = simplePPL.run('x ~ Unif(0,1)')
     self.assertEqual(str(s.lookup_rv('x')), 'x ~ Uniform')

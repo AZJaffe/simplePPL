@@ -174,12 +174,12 @@ def parse_data(tree):
 def parse_shape(store, shape_expr):
   shape = ()
   for shapearg in shape_expr.children:
-    shape = shape + parse_shapearg(shapearg)
+    shape = shape + parse_shapearg(store, shapearg)
   return shape
 
 def parse_shapearg(store, shapearg):
   if shapearg.data == 'shapearg':
-    val = shapearg.children[0].value
+    val = int(shapearg.children[0].value)
     assert val >= 0
     return (val,)
   elif shapearg.data == 'likeother':
@@ -211,6 +211,8 @@ def process_numexpr(store, numexp):
     return processed_children[0] / processed_children[1]
   elif numexp.data == 'negation':
     return -processed_children[0]
+  elif numexp.data == 'matmul':
+    return processed_children[0] @ processed_children[1]
   elif numexp.data == 'parantheses':
     return processed_children[0]
 
