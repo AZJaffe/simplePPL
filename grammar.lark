@@ -1,12 +1,13 @@
 simpleppl: defn*
 defn: ID ":=" numexpr -> assign
-    | ID "~" dist -> distributed
+    | ID [shape] "~" dist -> distributed
     | ID "=" data -> dataassign
 
 numexpr: numexpr "+" numexpr -> sum
        | numexpr "-" numexpr -> difference
        | numexpr "*" numexpr -> product
        | numexpr "/" numexpr -> quotient
+       | numexpr "@" numexpr -> matmul
        | "-" numexpr -> negation
        | "(" numexpr ")" -> parentheses
        | ID -> id
@@ -14,9 +15,13 @@ numexpr: numexpr "+" numexpr -> sum
 
 dist: ID "(" [numexpr ("," numexpr)*] ")"
 
-
 data: NUMBER -> number 
     | "[" [data ("," data)*] "]" -> vector
+
+shape: "(" [shapearg ("," shapearg)*] ")"
+     | 
+shapearg: INT
+        | ID "#" [INT] -> likeother
 
 %import common.INT
 %import common.SIGNED_NUMBER -> NUMBER

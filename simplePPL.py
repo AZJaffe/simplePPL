@@ -59,6 +59,13 @@ class Store():
     else:
       return None
 
+  def lookup_shape(self, var):
+    if var in self.data:
+      return self.data[var].shape
+    if var in self.rvs:
+      return self.rvs[var].dshape
+    raise UnitializedVariable(var)
+
   def lookup_rv(self, var):
     if var not in self.rvs:
       raise UnitializedVariable(var)
@@ -92,11 +99,18 @@ def run(program):
       distributed_stmt(store, stmt)
     if stmt.data == 'dataassign':
       data_assign_stmt(store, stmt)
+    if stmt.data == 'assign':
+      assign_stmt(store, stmt)
   return store
 
 def distributed_stmt(store, stmt):
   var = stmt.children[0].value
-  dist_stmt = stmt.children[1]
+  if len(stmt.children) == 2:
+    shape = ()
+    dist_stmt = stmt.children[1]
+  else:
+    shape = parse_shape(store, stmt.children[1])
+    dist_stmt = stmt.children[2]
   dist = dist_stmt.children[0].value
   args = [process_numexpr(store, arg) for arg in dist_stmt.children[1:]]
   check_arity(dist, len(args))
@@ -104,29 +118,26 @@ def distributed_stmt(store, stmt):
   with store.model:
   # Discrete
     if dist == 'Bern':
-      store.add_rv(var, pm.Bernoulli(var, p=args[0], observed=data))
+      store.add_rv(var, pm.Bernoulli(var, p=args[0], observed=data, shape=shape))
     elif dist == 'Unif':
-      store.add_rv(var, pm.Uniform(var, lower=args[0], upper=args[1], observed=data))
+      store.add_rv(var, pm.Uniform(var, lower=args[0], upper=args[1], observed=data, shape=shape))
     elif dist == 'Beta':
-      store.add_rv(var, pm.Beta(var, alpha=args[0], beta=args[1], observed=data))
+      store.add_rv(var, pm.Beta(var, alpha=args[0], beta=args[1], observed=data, shape=shape))
     elif dist == 'Pois':
-      store.add_rv(var, pm.Poisson(var, mu=args[0], observed=data))
+      store.add_rv(var, pm.Poisson(var, mu=args[0], observed=data, shape=shape))
     elif dist == 'DUnif':
-      store.add_rv(var, pm.DiscreteUniform(var, lower=args[0], upper=args[1], observed=data))
+      store.add_rv(var, pm.DiscreteUniform(var, lower=args[0], upper=args[1], observed=data, shape=shape))
     elif dist == 'Binom':
-      store.add_rv(var, pm.Binomial(var, n=args[0], p=args[1], observed=data))
+      store.add_rv(var, pm.Binomial(var, n=args[0], p=args[1], observed=data, shape=shape))
     elif dist == 'Geometric':
-      store.add_rv(var, pm.Geometric(var, p=args[0], observed=data))
+      store.add_rv(var, pm.Geometric(var, p=args[0], observed=data, shape=shape))
     # Continuous
     elif dist == 'N':
-      store.add_rv(var, pm.Normal(var, mu=args[0], sigma=args[1], observed=data))
-    # elif dist == 'Dir':
-    #   store.add_rv(var, var, m.Var(var, pm.Dirchlet.dist(a=args[0]), data=data))
-    elif dist == 'Exp':
-      store.add_rv(var, pm.Exponential(var, lam=args[0], testval=0, observed=data))
-    # Multivariate
+      store.add_rv(var, pm.Normal(var, mu=args[0], sigma=args[1], observed=data, shape=shape))
     elif dist == 'Gamma':
-      store.add_rv(var, pm.Gamma(var, alpha=args[0], beta=args[1], observed=data))
+      store.add_rv(var, pm.Gamma(var, alpha=args[0], beta=args[1], observed=data, shape=shape))
+    elif dist == 'Exp':
+      store.add_rv(var, pm.Exponential(var, lam=args[0], testval=0, observed=data, shape=shape))
 
 def data_assign_stmt(store, stmt):
   var = stmt.children[0].value
@@ -134,10 +145,17 @@ def data_assign_stmt(store, stmt):
   a = parse_data(data)
   store.add_data(var, a)
 
+def assign_stmt(store, stmt):
+  var = stmt.children[0].value
+  data = stmt.children[1]
+  a = process_numexpr(store, data)
+  with store.model:
+    store.add_rv(var, pm.Deterministic(var, a))
+
 def parse_data(tree):
   if tree.data == 'number':
     return tree.children[0].value
-  if len(data.children) == 0:
+  if len(tree.children) == 0:
     return np.array([])
   if tree.children[0].data == 'number':
     a = np.zeros((len(tree.children)))
@@ -152,6 +170,25 @@ def parse_data(tree):
       if a[0].shape != subarray.shape:
         raise InvalidDataLiteral()
     return np.stack(a)
+
+def parse_shape(store, shape_expr):
+  shape = ()
+  for shapearg in shape_expr.children:
+    shape = shape + parse_shapearg(shapearg)
+  return shape
+
+def parse_shapearg(store, shapearg):
+  if shapearg.data == 'shapearg':
+    val = shapearg.children[0].value
+    assert val >= 0
+    return (val,)
+  elif shapearg.data == 'likeother':
+    var = shapearg.children[0].value
+    varshape = store.lookup_shape(var)
+    if len(shapearg.children) == 2:
+      part = shapearg.children[1].value
+      return varshape[part]
+    return varshape
 
 def process_numexpr(store, numexp):
   # Base Cases
