@@ -17,7 +17,8 @@ p ~ Beta(1,1)
 x ~ Bern(p)
 ```
 
-Running this program returns statistics about the posterior distribution of the random variable `p`:
+Running this program returns statistics about the posterior distribution of the random variable `p`
+using [arviz.summary](https://arviz-devs.github.io/arviz/api/generated/arviz.summary.html):
 ```
 Auto-assigning NUTS sampler...
 Initializing NUTS using jitter+adapt_diag...
