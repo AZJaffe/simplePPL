@@ -74,7 +74,6 @@ def check_arity(dist, nargs):
     'Beta': 2,
     'Pois': 1,
     'DUnif': 2,
-    'Dir': 1,
     'Gamma': 2,
     'Exp': 1,
     'Geometric': 1,
