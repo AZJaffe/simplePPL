@@ -181,8 +181,8 @@ def parse_shapearg(store, shapearg):
     var = shapearg.children[0].value
     varshape = store.lookup_shape(var)
     if len(shapearg.children) == 2:
-      part = shapearg.children[1].value
-      return varshape[part]
+      part = int(shapearg.children[1].value)
+      return (varshape[part],)
     return varshape
 
 def process_numexpr(store, numexp):

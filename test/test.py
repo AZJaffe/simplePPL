@@ -48,6 +48,8 @@ class Test(unittest.TestCase):
     self.assertEqual(str(s.lookup_rv('z')), 'z ~ Normal')
     self.assertEqual(str(s.lookup_rv('y')), 'y ~ Deterministic')
 
+    p = simplePPL.load('./examples/bern.ppl')
+    s = simplePPL.run(p)
 
   def test_distribution_errors(self):
     try:
