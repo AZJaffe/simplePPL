@@ -24,6 +24,10 @@ shape: "(" [shapearg ("," shapearg)*] ")"
 shapearg: INT
         | ID "#" [INT] -> likeother
 
+
+COMMENT: "#" /[^\n]/*
+%ignore COMMENT
+
 %import common.INT
 %import common.SIGNED_NUMBER -> NUMBER
 %import common.WS
