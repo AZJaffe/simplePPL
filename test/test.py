@@ -37,19 +37,12 @@ class Test(unittest.TestCase):
     p = simplePPL.load('./examples/bayesian_bern.ppl')
     s = simplePPL.run(p)
 
-    p = simplePPL.load('./examples/bern.ppl')
-    s = simplePPL.run(p)
-    self.assertEqual(str(s.lookup_rv('x')), 'x ~ Bernoulli')
-
     p = simplePPL.load('./examples/assign.ppl')
     s = simplePPL.run(p)
     self.assertEqual(str(s.lookup_rv('x1')), 'x1 ~ Normal')
     self.assertEqual(str(s.lookup_rv('x2')), 'x2 ~ Normal')
     self.assertEqual(str(s.lookup_rv('z')), 'z ~ Normal')
     self.assertEqual(str(s.lookup_rv('y')), 'y ~ Deterministic')
-
-    p = simplePPL.load('./examples/bern.ppl')
-    s = simplePPL.run(p)
 
   def test_distribution_errors(self):
     try:
