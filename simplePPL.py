@@ -54,10 +54,7 @@ class Store():
     self.data[var] = data
 
   def lookup_data(self, var):
-    if var in self.data:
-      return self.data[var]
-    else:
-      return None
+    return self.data.get(var,None)
 
   def lookup_shape(self, var):
     if var in self.data:
@@ -67,9 +64,7 @@ class Store():
     raise UnitializedVariable(var)
 
   def lookup_rv(self, var):
-    if var not in self.rvs:
-      raise UnitializedVariable(var)
-    return self.rvs[var]  
+    return self.rvs.get(var,None)
 
 def check_arity(dist, nargs):
   dists_to_arity = {
@@ -195,11 +190,26 @@ def process_numexpr(store, numexp):
   if numexp.data == 'number':
     return float(numexp.children[0].value)
   if numexp.data == 'id':
-    return store.lookup_rv(numexp.children[0].value)
+    var = numexp.children[0].value
+    rv = store.lookup_rv(var)
+    if rv != None:
+      return rv
+    data = store.lookup_data(var)
+    if data is not None:
+      # Data is fixed, not a rv, but hack it into rv because it should work
+      with store.model:
+        d = pm.Data(var, data)
+      store.add_rv(var, d)
+      return d
+  if numexp.data == 'call':
+    # In this case, the first child is the identifier of the fn to call, the rest are the args
+    children = numexp.children[1:]
+  else:
+    children = numexp.children
 
   # Recursive cases
-  processed_children = [None]*len(numexp.children)
-  for i,child in enumerate(numexp.children):
+  processed_children = [None]*len(children)
+  for i,child in enumerate(children):
     processed_children[i] = process_numexpr(store, child)
   if numexp.data == 'sum':
     return processed_children[0] + processed_children[1]
@@ -213,6 +223,10 @@ def process_numexpr(store, numexp):
     return -processed_children[0]
   elif numexp.data == 'matmul':
     return processed_children[0] @ processed_children[1]
+  elif numexp.data == 'call':
+    f_name = numexp.children[0].value
+    # Will throw if f_name is not a tt function
+    return getattr(pm.math, f_name)(*processed_children)
   elif numexp.data == 'parantheses':
     return processed_children[0]
 

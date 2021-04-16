@@ -10,6 +10,7 @@ numexpr: numexpr "+" numexpr -> sum
        | numexpr "@" numexpr -> matmul
        | "-" numexpr -> negation
        | "(" numexpr ")" -> parentheses
+       | ID "(" [numexpr ("," numexpr)*] ")" -> call
        | ID -> id
        | NUMBER -> number
 
